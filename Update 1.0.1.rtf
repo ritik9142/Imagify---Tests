@@ -1,0 +1,372 @@
+{\rtf1\ansi\ansicpg1252\deff0\nouicompat\deflang1033{\fonttbl{\f0\fnil\fcharset0 Calibri;}}
+{\colortbl ;\red0\green0\blue255;\red255\green0\blue0;\red0\green0\blue0;}
+{\*\generator Riched20 10.0.19041}\viewkind4\uc1 
+\pard\sa200\sl276\slmult1\f0\fs22\lang9 I want to have a email verfication system whenever someone makes a new account on my website \par
+Give me complete, revised and improved code.  \par
+my web app remage features a pretty basic registration mechanism , where whenever a new user comes to my website he has to register using his name , email and password in this sign up form user registers using any email and password/\par
+I also want my website to accept email's that has trusted domains names and providers behind them (e.g xxxxx@gmail.com , xxxxxx@yahoo.com, xxxxx@xxxx.in ) other emails shouldn't be allowed to avoid spams on my website. \par
+I want you to set this website in such a way user should go For strong password security, aim for a minimum of 6 characters, using a mix of uppercase and lowercase letters, numbers, and symbols, and avoid common words or personal information like their mentioned name shouldn't be in their password and for eg a new user entres password "123456" he should be informed to use a strong password with mix of uppercase and lowercase letters, numbers, and symbols, and avoid common words or personal information , until user entres a strong password the "Create Account" Button should not be clickable. \par
+Make sure that the new user doesn't put any email that has been already registared right now if try to sign up using a mail that has been already registered we get this long error "E11000 duplicate key error collection: imagify.users index: email_1 dup key: \{ email: "xxxxx@gmail.com" \}"  intead of that error message should be "The email address you have entered is already registered. Want to sign in instead?"\par
+once user puts his name ,email and password and click's on create account button he should be sent a email verifying on his submitted email \par
+new user should be shown a screen something like this :{{\field{\*\fldinst{HYPERLINK https://cdn.prod.website-files.com/5c2a9a234fdbba7439c48fa4/674728ca966709b5c0e8c15a_AD_4nXcd_IBRq1WSikTzFDwlGWJLsG20k89uelrY3b5sn2DJCmGIMLdyA2a1YSD8Jo-NVnG4GqUhQu7ZgnN58qN_cn5GBzRMRVLMebE432egIhs3w0WobW1St4srSARuurv8By4shjQE0ZVXfQ6nCvu58ARqe3Qa.png }}{\fldrslt{https://cdn.prod.website-files.com/5c2a9a234fdbba7439c48fa4/674728ca966709b5c0e8c15a_AD_4nXcd_IBRq1WSikTzFDwlGWJLsG20k89uelrY3b5sn2DJCmGIMLdyA2a1YSD8Jo-NVnG4GqUhQu7ZgnN58qN_cn5GBzRMRVLMebE432egIhs3w0WobW1St4srSARuurv8By4shjQE0ZVXfQ6nCvu58ARqe3Qa.png\ul0\cf0}}}}\f0\fs22\par
+and in his submitted email inbox he should recive a mail like this : {{\field{\*\fldinst{HYPERLINK https://res.cloudinary.com/mailmodo/image/upload/v1658136741/strapi/large_email_verification_template_by_Mailmodo_0182dee994.png }}{\fldrslt{https://res.cloudinary.com/mailmodo/image/upload/v1658136741/strapi/large_email_verification_template_by_Mailmodo_0182dee994.png\ul0\cf0}}}}\f0\fs22\par
+after user succsessfully verified their only then he should be logged in for first time , remember that this is one time process for email verification for new users only .\par
+Files that are being used in this as a front end : Login.jsx \par
+Files that are being used as backend : userController.js , userRoutes.js\par
+\cf2\ul Login.jsx code :  \cf0\ulnone import React, \{ useContext, useEffect, useState \} from 'react';\par
+import \{ assets \} from '../assets/assets';\par
+import \{ AppContext \} from '../Context/AppContext';\par
+import \{ motion \} from 'framer-motion';\par
+import axios from 'axios';\par
+import \{ toast \} from 'react-toastify';\par
+\par
+const Login = () => \{\par
+  const [state, setState] = useState('Login');\par
+  const \{ setShowLogin, backendUrl, setToken, setUser \} = useContext(AppContext);\par
+\par
+  const [name, setName] = useState('');\par
+  const [email, setEmail] = useState('');\par
+  const [password, setPassword] = useState('');\par
+\par
+  const onSubmitHandler = async (e) => \{\par
+    e.preventDefault();\par
+\par
+    try \{\par
+      if (state === 'Login') \{\par
+        const \{ data \} = await axios.post(backendUrl + '/api/user/login', \{ email, password \});\par
+        if (data.success) \{\par
+          setToken(data.token);\par
+          setUser(data.user);\par
+          localStorage.setItem('token', data.token);\par
+          setShowLogin(false);\par
+        \} else \{\par
+          toast.error(data.message);\par
+        \}\par
+      \} else \{\par
+        const \{ data \} = await axios.post(backendUrl + '/api/user/register', \{ name, email, password \});\par
+        if (data.success) \{\par
+          setToken(data.token);\par
+          setUser(data.user);\par
+          localStorage.setItem('token', data.token);\par
+          setShowLogin(false);\par
+        \} else \{\par
+          toast.error(data.message);\par
+        \}\par
+      \}\par
+    \} catch (error) \{\par
+      toast.error(error.message);\par
+    \}\par
+  \};\par
+\par
+  useEffect(() => \{\par
+    document.body.style.overflow = 'hidden';\par
+    return () => \{\par
+      document.body.style.overflow = 'unset';\par
+    \};\par
+  \}, []);\par
+\par
+  return (\par
+    <div className='fixed top-0 left-0 right-0 bottom-0 z-10 backdrop-blur-sm bg-black/30 flex justify-center items-center'>\par
+      <motion.form\par
+        onSubmit=\{onSubmitHandler\}\par
+        initial=\{\{ opacity: 0.2, y: 50 \}\}\par
+        transition=\{\{ duration: 0.3 \}\}\par
+        whileInView=\{\{ opacity: 1, y: 0 \}\}\par
+        viewport=\{\{ once: true \}\}\par
+        className='relative bg-white p-10 rounded-xl text-slate-500'\par
+      >\par
+        <h1 className='text-center text-2xl text-neutral-700 font-medium'>\{state\}</h1>\par
+        \{state === 'Login' && (<p className='text-sm'>Welcome back! Please sign in to continue</p>)\}\par
+        \par
+\par
+        \{state !== 'Login' && (\par
+          <div className='border px-6 py-2 flex items-center gap-2 rounded-full mt-4'>\par
+            <img src=\{assets.user_icon\} alt="User icon" />\par
+            <input\par
+              onChange=\{(e) => setName(e.target.value)\}\par
+              value=\{name\}\par
+              className='outline-none text-sm'\par
+              type="text"\par
+              placeholder='Full Name'\par
+              required\par
+            />\par
+          </div>\par
+        )\}\par
+\par
+        <div className='border px-6 py-2 flex items-center gap-2 rounded-full mt-5'>\par
+          <img src=\{assets.email_icon\} alt="Email icon" />\par
+          <input\par
+            onChange=\{(e) => setEmail(e.target.value)\}\par
+            value=\{email\}\par
+            className='outline-none text-sm'\par
+            type="email"\par
+            placeholder='Email id'\par
+            required\par
+          />\par
+        </div>\par
+\par
+        <div className='border px-6 py-2 flex items-center gap-2 rounded-full mt-5'>\par
+          <img src=\{assets.lock_icon\} alt="Password icon" />\par
+          <input\par
+            onChange=\{(e) => setPassword(e.target.value)\}\par
+            value=\{password\}\par
+            className='outline-none text-sm'\par
+            type="password"\par
+            placeholder='Password'\par
+            required\par
+          />\par
+        </div>\par
+\par
+        \{/* <p className='text-sm text-blue-600 my-4 cursor-pointer'>Forgot Password?</p> */\}                               \{/* Forgot Password for future use */\}\par
+\par
+        <button className='mt-6 bg-blue-600 w-full text-white py-2 rounded-full'>\par
+          \{state === 'Login' ? 'Sign In' : 'Create Account'\}\par
+        </button>\par
+\par
+        \{state === 'Login' ? (\par
+          <p className='mt-5 text-center'>\par
+            Don't have an account?\par
+            <span className='text-blue-600 cursor-pointer' onClick=\{() => setState('Sign Up')\}>\par
+              Sign up\par
+            </span>\par
+          </p>\par
+        ) : (\par
+          <p className='mt-5 text-center'>\par
+            Already have an account?\par
+            <span className='text-blue-600 cursor-pointer' onClick=\{() => setState('Login')\}>\par
+              Login\par
+            </span>\par
+          </p>\par
+        )\}\par
+\par
+        <img\par
+          onClick=\{() => setShowLogin(false)\}\par
+          src=\{assets.cross_icon\}\par
+          alt="Close icon"\par
+          className='absolute top-5 right-5'\par
+        />\par
+      </motion.form>\par
+    </div>\par
+  );\par
+\};\par
+\par
+export default Login;\par
+\cf2\ul\par
+userController.js Code : \cf3\ulnone import userModel from "../models/userModel.js";\par
+import bcrypt from "bcrypt";\par
+import jwt from "jsonwebtoken";\par
+import Razorpay from "razorpay";\par
+import transactionModel from "../models/transactionModel.js";\par
+import crypto from "crypto"; // Added for payment signature verification\par
+\par
+const registerUser = async (req, res) => \{\par
+  try \{\par
+    const \{ name, email, password \} = req.body;\par
+    if (!name || !email || !password) \{\par
+      return res.json(\{ success: false, message: "Missing Details" \});\par
+    \}\par
+    const salt = await bcrypt.genSalt(10);\par
+    const hashedPassword = await bcrypt.hash(password, salt);\par
+    const userData = \{ name, email, password: hashedPassword \};\par
+    const newUser = new userModel(userData);\par
+    const user = await newUser.save();\par
+    // Include user id in the response\par
+    const token = jwt.sign(\{ id: user._id \}, process.env.JWT_SECRET);\par
+    res.json(\{ success: true, token, user: \{ id: user._id, name: user.name \} \});\par
+  \} catch (error) \{\par
+    console.error(error);\par
+    res.json(\{ success: false, message: error.message \});\par
+  \}\par
+\};\par
+\par
+const loginUser = async (req, res) => \{\par
+  try \{\par
+    const \{ email, password \} = req.body;\par
+    const user = await userModel.findOne(\{ email \});\par
+    if (!user) \{\par
+      return res.json(\{ success: false, message: "User does not exist" \});\par
+    \}\par
+    const isMatch = await bcrypt.compare(password, user.password);\par
+    if (isMatch) \{\par
+      const token = jwt.sign(\{ id: user._id \}, process.env.JWT_SECRET);\par
+      return res.json(\{\par
+        success: true,\par
+        token,\par
+        user: \{ id: user._id, name: user.name \},\par
+      \});\par
+    \} else \{\par
+      return res.json(\{ success: false, message: "Invalid credentials" \});\par
+    \}\par
+  \} catch (error) \{\par
+    console.error(error);\par
+    res.json(\{ success: false, message: error.message \});\par
+  \}\par
+\};\par
+\par
+const userCredits = async (req, res) => \{\par
+  try \{\par
+    const \{ userID \} = req.body;\par
+    const user = await userModel.findById(userID);\par
+    if (!user) \{\par
+      return res.json(\{ success: false, message: "User not found" \});\par
+    \}\par
+    res.json(\{\par
+      success: true,\par
+      credits: user.creditBalance,\par
+      user: \{ name: user.name \},\par
+    \});\par
+  \} catch (error) \{\par
+    console.error(error.message);\par
+    res.json(\{ success: false, message: error.message \});\par
+  \}\par
+\};\par
+\par
+const razorpayInstance = new Razorpay(\{\par
+  key_id: process.env.RAZORPAY_KEY_ID,\par
+  key_secret: process.env.RAZORPAY_KEY_SECRET,\par
+\});\par
+\par
+const paymentRazorpay = async (req, res) => \{\par
+  try \{\par
+    const \{ planId \} = req.body;\par
+    if (!planId) \{\par
+      return res.json(\{ success: false, message: "Missing Details" \});\par
+    \}\par
+\par
+    // Extract and verify token from headers to get the user id\par
+    const token = req.headers.token;\par
+    if (!token) \{\par
+      return res.json(\{ success: false, message: "Missing token" \});\par
+    \}\par
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);\par
+    const userId = decoded.id;\par
+\par
+    // Verify the user exists\par
+    const userData = await userModel.findById(userId);\par
+    if (!userData) \{\par
+      return res.json(\{ success: false, message: "User not found" \});\par
+    \}\par
+\par
+    let credits, plan, amount, date;\par
+    switch (planId) \{\par
+      case "Basic":\par
+        plan = "Basic";\par
+        credits = 100;\par
+        amount = 99;\par
+        break;\par
+      case "Advanced":\par
+        plan = "Advanced";\par
+        credits = 500;\par
+        amount = 459;\par
+        break;\par
+      case "Business":\par
+        plan = "Business";\par
+        credits = 5000;\par
+        amount = 4499;\par
+        break;\par
+      default:\par
+        return res.json(\{ success: false, message: "Plan not found" \});\par
+    \}\par
+\par
+    date = Date.now();\par
+    const transactionData = \{ userId, plan, amount, credits, date \};\par
+    const newTransaction = await transactionModel.create(transactionData);\par
+\par
+    const options = \{\par
+      amount: amount * 100, // amount in smallest currency unit\par
+      currency: process.env.CURRENCY,\par
+      receipt: newTransaction._id.toString(),\par
+    \};\par
+\par
+    const order = await razorpayInstance.orders.create(options);\par
+    res.json(\{ success: true, order \});\par
+  \} catch (error) \{\par
+    console.error(error);\par
+    res.json(\{ success: false, message: error.message \});\par
+  \}\par
+\};\par
+\par
+const verifyRazorpay = async (req, res) => \{\par
+  try \{\par
+    // Extract the payment details from the client response\par
+    const \{ razorpay_order_id, razorpay_payment_id, razorpay_signature \} =\par
+      req.body;\par
+\par
+    // Verify the payment signature using crypto\par
+    const hmac = crypto.createHmac("sha256", process.env.RAZORPAY_KEY_SECRET);\par
+    hmac.update(`$\{razorpay_order_id\}|$\{razorpay_payment_id\}`);\par
+    const generatedSignature = hmac.digest("hex");\par
+\par
+    if (generatedSignature !== razorpay_signature) \{\par
+      return res.json(\{\par
+        success: false,\par
+        message: "Payment verification failed",\par
+      \});\par
+    \}\par
+\par
+    // Fetch the order info to retrieve the receipt (which is our transaction id)\par
+    const orderInfo = await razorpayInstance.orders.fetch(razorpay_order_id);\par
+    const transactionData = await transactionModel.findById(orderInfo.receipt);\par
+    if (!transactionData) \{\par
+      return res.json(\{\par
+        success: false,\par
+        message: "Transaction not found",\par
+      \});\par
+    \}\par
+    if (transactionData.payment) \{\par
+      return res.json(\{\par
+        success: false,\par
+        message: "Payment already processed",\par
+      \});\par
+    \}\par
+\par
+    const userData = await userModel.findById(transactionData.userId);\par
+    if (!userData) \{\par
+      return res.json(\{ success: false, message: "User not found" \});\par
+    \}\par
+\par
+    const creditBalance = userData.creditBalance + transactionData.credits;\par
+    await userModel.findByIdAndUpdate(userData._id, \{ creditBalance \});\par
+    await transactionModel.findByIdAndUpdate(transactionData._id, \{\par
+      payment: true,\par
+    \});\par
+\par
+    res.json(\{ success: true, message: "Credits Added" \});\par
+  \} catch (error) \{\par
+    console.error(error);\par
+    res.json(\{ success: false, message: error.message \});\par
+  \}\par
+\};\par
+\par
+export \{\par
+  registerUser,\par
+  loginUser,\par
+  userCredits,\par
+  paymentRazorpay,\par
+  verifyRazorpay,\par
+\};\par
+\par
+\cf2\ul userRoutes.js code : \cf3\ulnone  import express from "express";\par
+import \{ registerUser, loginUser, userCredits, paymentRazorpay, verifyRazorpay \} from "../controllers/userController.js";\par
+import userAuth from "../middlewares/auth.js";\par
+\par
+const userRouter = express.Router();\par
+\par
+userRouter.post("/register", registerUser);\par
+userRouter.post("/login", loginUser);\par
+userRouter.get("/credits", userAuth, userCredits);\par
+userRouter.post("/pay-razor", userAuth, paymentRazorpay);\par
+userRouter.post("/verify-razor", verifyRazorpay);\par
+\par
+export default userRouter;\par
+\par
+// For Postman:\par
+// {{\field{\*\fldinst{HYPERLINK http://localhost:4000/api/user/register }}{\fldrslt{http://localhost:4000/api/user/register\ul0\cf0}}}}\f0\fs22\par
+// {{\field{\*\fldinst{HYPERLINK http://localhost:4000/api/user/login }}{\fldrslt{http://localhost:4000/api/user/login\ul0\cf0}}}}\f0\fs22\par
+\par
+\cf0\par
+\par
+\par
+\par
+}
+ 
