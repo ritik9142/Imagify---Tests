@@ -26,10 +26,6 @@ if (!process.env.JWT_SECRET || !process.env.FRONTEND_URL) {
   process.exit(1);
 }
 
-/*
-  Registration endpoint now handles both initial registration (sending OTP code)
-  and OTP verification (when "code" is provided).
-*/
 const registerUser = async (req, res) => {
   try {
     const { name, email, password, code } = req.body;
@@ -73,11 +69,13 @@ const registerUser = async (req, res) => {
       };
 
       const newUser = new userModel(userData);
-      await newUser.save();
+      const savedUser = await newUser.save();
+
+      // Log the saved document to confirm fields are persisted
+      console.log(`Saved user document: ${JSON.stringify(savedUser)}`);
+      console.log(`New user registered: ${email}, Verification Code: ${verificationCode}, Expires: ${verificationCodeExpires}`);
 
       await sendVerificationEmail(email, verificationCode);
-
-      console.log(`New user registered: ${email}, Verification Code: ${verificationCode}, Expires: ${verificationCodeExpires}`);
 
       return res.json({
         success: true,
@@ -89,6 +87,8 @@ const registerUser = async (req, res) => {
         return res.json({ success: false, message: "Please provide the verification code and password" });
       }
 
+      // Log the full user document to inspect its state
+      console.log(`User document before verification: ${JSON.stringify(existingUser)}`);
       console.log(`Verification attempt for ${email}: Provided Code: "${code}", Stored Code: "${existingUser.verificationCode}", Expires: ${existingUser.verificationCodeExpires}, Current Time: ${Date.now()}`);
 
       const isCodeMatch = String(code) === String(existingUser.verificationCode);
@@ -130,6 +130,7 @@ const registerUser = async (req, res) => {
   }
 };
 
+// Rest of the file remains unchanged (loginUser, verifyEmail, etc.)
 const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -156,10 +157,6 @@ const loginUser = async (req, res) => {
   }
 };
 
-/*
-  Optional: An endpoint to verify email via a GET request using query parameters.
-  This is provided if you want to support a link-based verification fallback.
-*/
 const verifyEmail = async (req, res) => {
   try {
     const { code, email } = req.query;
@@ -204,8 +201,6 @@ const resendVerificationEmail = async (req, res) => {
     return res.json({ success: false, message: error.message });
   }
 };
-
-// --- The remaining functions remain unchanged ---
 
 const userCredits = async (req, res) => {
   try {
