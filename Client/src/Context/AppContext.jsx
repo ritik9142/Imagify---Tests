@@ -68,7 +68,7 @@ const AppContextProvider = (props) => {
       const { data } = await axios.post(
         `${backendUrl}/api/image/generate-image-to-image`,
         formData,
-        { headers: { token, "Content-Type": "multipart/form-data" } }
+        { headers: { token } }
       );
 
       if (data.success) {
