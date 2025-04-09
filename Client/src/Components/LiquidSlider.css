@@ -1,1 +1,69 @@
-
+/* src/components/LiquidSlider.css */
+.liquid-slider {
+    position: relative;
+    width: 100%;
+    height: 20px;
+    cursor: pointer;
+    user-select: none;
+  }
+  
+  .liquid-slider-track {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #e0e0e0;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  
+  .liquid-slider-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4facfe, #00f2fe);
+    position: relative;
+    transition: width 0.2s ease;
+  }
+  
+  .liquid-slider-wave {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 200%;
+    height: 100%;
+    background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 10"><path fill="rgba(255,255,255,0.2)" d="M0 5 Q 25 0, 50 5 T 100 5 V 10 H 0 Z"/></svg>');
+    background-size: 50px 10px;
+    animation: wave 2s linear infinite;
+  }
+  
+  .liquid-slider-thumb {
+    position: absolute;
+    top: 50%;
+    width: 16px;
+    height: 16px;
+    background: #fff;
+    border: 2px solid #4facfe;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: left 0.2s ease;
+  }
+  
+  @keyframes wave {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(-50%);
+    }
+  }
+  
+  /* Responsiveness */
+  @media (max-width: 768px) {
+    .liquid-slider {
+      height: 16px;
+    }
+    .liquid-slider-thumb {
+      width: 12px;
+      height: 12px;
+    }
+  }
