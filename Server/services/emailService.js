@@ -1,5 +1,31 @@
 import nodemailer from 'nodemailer';
 
+// Helper function to generate a random verification code
+// Requirements: at least 6 characters with uppercase, lowercase, numbers, and special characters.
+const generateVerificationCode = () => {
+  const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const lower = 'abcdefghijklmnopqrstuvwxyz';
+  const numbers = '0123456789';
+  const specials = '!@#$%^&*';
+  const allChars = upper + lower + numbers + specials;
+  let code = '';
+  
+  // Ensure at least one character from each category is included
+  code += upper[Math.floor(Math.random() * upper.length)];
+  code += lower[Math.floor(Math.random() * lower.length)];
+  code += numbers[Math.floor(Math.random() * numbers.length)];
+  code += specials[Math.floor(Math.random() * specials.length)];
+  
+  // Fill the rest to meet a minimum of 6 characters
+  for (let i = 4; i < 6; i++) {
+    code += allChars[Math.floor(Math.random() * allChars.length)];
+  }
+  
+  // Optionally shuffle the characters so that the fixed positions are randomized
+  code = code.split('').sort(() => Math.random() - 0.5).join('');
+  return code;
+};
+
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
@@ -8,18 +34,17 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-export const sendVerificationEmail = async (email, token) => {
-  const verificationUrl = `${process.env.BACKEND_URL}/api/user/verify-email?token=${token}`;
+export const sendVerificationEmail = async (email, code) => {
   await transporter.sendMail({
     from: process.env.EMAIL_USER,
     to: email,
-    subject: 'Verify Your Remage Account',
+    subject: 'Your Verification Code for Krutishu',
     html: `
       <!DOCTYPE html>
       <html>
       <head>
         <meta charset="UTF-8">
-        <title>Verify Your Email</title>
+        <title>Your Verification Code</title>
         <style>
           body {
             font-family: Arial, sans-serif;
@@ -46,14 +71,13 @@ export const sendVerificationEmail = async (email, token) => {
             padding: 20px;
             color: #333333;
           }
-          .button {
-            display: inline-block;
-            padding: 12px 20px;
+          .code {
+            font-size: 24px;
+            font-weight: bold;
+            color: #008080;
+            letter-spacing: 2px;
             margin: 20px 0;
-            background-color: #008080;
-            color: #ffffff;
-            text-decoration: none;
-            border-radius: 4px;
+            text-align: center;
           }
           .footer {
             font-size: 12px;
@@ -67,20 +91,19 @@ export const sendVerificationEmail = async (email, token) => {
       <body>
         <div class="container">
           <div class="header">
-          <img src="https://d3v5mrcg9cc5a5.cloudfront.net/i6i1k1%2Fpreview%2F65577654%2Fmain_large.png?response-content-disposition=inline%3Bfilename%3D%22main_large.png%22%3B&response-content-type=image%2Fpng&Expires=1742775625&Signature=JDdncXh5bZEamscX-5DJAQ0q9isLqWTItPAayVtCNmOUQw84Y~2cPe9zIIfEcG34PIXoUBOe8WT7hv2MyzpdMAtixa6sGB5C6EBzFVms78tvqCB9XBHZBqomLRdn0jep3RTU1ar5DZDgCpiUGMYNbp3NZ4BwwDWYf-JQHBqdMcDxgWVH67VZr4ytsr~BGRn18EtgHugvEqEQAYvzZEmBnSXc~XuRfbUZ8NURU1v3QHdKv1tgCmx84vGV9kdkLLvK6B5aFucADCYmYthF1MQf9NvFn28uvhfVg2otrJaXFAT~pvrRG31f7JLl9DtSLkhHSWFc10xhYdVdmrdvQY7RGg__&Key-Pair-Id=APKAJT5WQLLEOADKLHBQ" alt="Computer man" style="width:100px;height:100px;">
-            <h1>Welcome to Remage</h1>
+            
+            <h1>Welcome to Krutishu</h1>
           </div>
           <div class="content">
             <p>Hello,</p>
-            <p>Thank you for registering with Remage! Please verify your email address by clicking the button below:</p>
-            <p><a class="button" href="${verificationUrl}">Verify Email</a></p>
-            <p>This link will expire in 1 hour. If you did not create an account, please ignore this email.</p>
-            <p>Click on Below Image for Tutorial.</p>
-            <p>Best regards,<br>The Remage Team</p>
+            <p>Thank you for registering with Krutishu! Please use the verification code below to verify your email address:</p>
+            <div class="code">${code}</div>
+            <p>This code will expire in 1 hour. If you did not create an account, please ignore this email.</p>
+            <p>For a tutorial, please click the image below.</p>
+            <p>Best regards,<br>The Krutishu Team</p>
           </div>
           <div class="footer">
-            <p>© 2025 Remage. All rights reserved.</p>
-            <img src="https://d2x4uvp6kxufyv.cloudfront.net/w0ktj1%2Fpreview%2F65577368%2Fmain_large.gif?response-content-disposition=inline%3Bfilename%3D%22main_large.gif%22%3B&response-content-type=image%2Fgif&Expires=1742775399&Signature=eTuBhZYZIJX3ib5qSuAm8FURuHiXxK05VvrHh6upXZlAsgu0APxMgUXmxe~hmOw3YewAr-H0VbBZ86lcw6TnPKQ3MjRxxTyAISrLZ-xcAbu3TpeHUgI~LR1Sj8cOWMuMa7hPBQZGWcCUckbto08cMwvytwPv9t63y3fpH5NcJWfPxe-Uy3GRrQNRcPArnOBsZIMzMr5hTN9hfFvdFLOWzRuNpnuPWxOHvJ5jqpuOPhHbZ9764v~NaZoscsgSZ04MgOu5AIaQ~O4q37O0vr5dnKcdWkFAXjt-4WEaNRfZB9DnE49qf60YduISXG4OjL-B8eypG5T7VzFckdym8tjhyA__&Key-Pair-Id=APKAJT5WQLLEOADKLHBQ" >
+            <p>© 2025 Krutishu. All rights reserved.</p>
           </div>
         </div>
       </body>
@@ -88,3 +111,5 @@ export const sendVerificationEmail = async (email, token) => {
     `
   });
 };
+
+export { generateVerificationCode };
