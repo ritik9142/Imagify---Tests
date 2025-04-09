@@ -6,8 +6,8 @@ const userSchema = new mongoose.Schema({
   password: { type: String, required: true },
   creditBalance: { type: Number, default: 7 },
   isVerified: { type: Boolean, default: false },
-  verificationToken: { type: String },
-  verificationTokenExpires: { type: Date }
+  verificationCode: { type: String },
+  verificationCodeExpires: { type: Number }
 });
 
 export default mongoose.model('User', userSchema);
