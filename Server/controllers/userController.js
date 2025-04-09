@@ -4,7 +4,7 @@ import jwt from "jsonwebtoken";
 import Razorpay from "razorpay";
 import transactionModel from "../models/transactionModel.js";
 import crypto from "crypto";
-import { sendVerificationEmail } from "../services/emailService.js";
+import { sendVerificationEmail, generateVerificationCode } from "../services/emailService.js";
 
 // Trusted domains list
 const trustedDomains = ['gmail.com', 'yahoo.com', 'outlook.com', 'example.in'];
@@ -20,58 +20,94 @@ const validatePassword = (password, name) => {
   return true;
 };
 
+/*
+  Registration endpoint now handles both initial registration (sending OTP code)
+  and OTP verification (when "code" is provided).
+*/
 const registerUser = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
-    if (!name || !email || !password) {
-      return res.json({ success: false, message: "Missing Details" });
+    const { name, email, password, code } = req.body;
+
+    // Ensure email is always provided
+    if (!email) {
+      return res.json({ success: false, message: "Email is required" });
     }
 
-    // Check email domain
-    const domain = email.split('@')[1];
-    if (!trustedDomains.includes(domain)) {
-      return res.json({ success: false, message: "Email domain not allowed" });
-    }
-
-    // Check for duplicate email
     const existingUser = await userModel.findOne({ email });
-    if (existingUser) {
+
+    if (!existingUser) {
+      // New user registration
+      if (!name || !password) {
+        return res.json({ success: false, message: "Name and password are required for registration" });
+      }
+
+      const domain = email.split('@')[1];
+      if (!trustedDomains.includes(domain)) {
+        return res.json({ success: false, message: "Email domain not allowed" });
+      }
+
+      if (!validatePassword(password, name)) {
+        return res.json({
+          success: false,
+          message: "Password must be at least 6 characters and include uppercase and lowercase letters, numbers, and symbols, and must not contain your name"
+        });
+      }
+
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password, salt);
+      const verificationCode = generateVerificationCode();
+      const verificationCodeExpires = Date.now() + 3600000; // 1 hour
+
+      const userData = {
+        name,
+        email,
+        password: hashedPassword,
+        isVerified: false,
+        verificationCode,
+        verificationCodeExpires
+      };
+
+      const newUser = new userModel(userData);
+      await newUser.save();
+
+      await sendVerificationEmail(email, verificationCode);
+
+      return res.json({
+        success: true,
+        message: "Verification code sent. Please enter the code to verify your account."
+      });
+    } else if (!existingUser.isVerified) {
+      // Existing user, not verified - handle verification
+      if (!code || !password) {
+        return res.json({ success: false, message: "Please provide the verification code and password" });
+      }
+
+      const isMatch = await bcrypt.compare(password, existingUser.password);
+      if (code === existingUser.verificationCode && existingUser.verificationCodeExpires > Date.now() && isMatch) {
+        existingUser.isVerified = true;
+        existingUser.verificationCode = undefined;
+        existingUser.verificationCodeExpires = undefined;
+        await existingUser.save();
+
+        const token = jwt.sign({ id: existingUser._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+        return res.json({
+          success: true,
+          token,
+          user: { id: existingUser._id, name: existingUser.name },
+          message: "Account verified and logged in."
+        });
+      } else {
+        return res.status(404).json({ success: false, message: "Wrong Verification Code or Password" });
+      }
+    } else {
       return res.json({
         success: false,
-        message: "The email address you have entered is already registered. Want to sign in instead?"
+        message: "The email address you have entered is already registered and verified. Please log in."
       });
     }
-
-    // Validate password
-    if (!validatePassword(password, name)) {
-      return res.json({
-        success: false,
-        message: "Password must be at least 6 characters and include uppercase and lowercase letters, numbers, and symbols, and must not contain your name"
-      });
-    }
-
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-    const verificationToken = crypto.randomBytes(32).toString('hex');
-    const verificationTokenExpires = Date.now() + 3600000; // 1 hour
-
-    const userData = {
-      name,
-      email,
-      password: hashedPassword,
-      isVerified: false,
-      verificationToken,
-      verificationTokenExpires
-    };
-    const newUser = new userModel(userData);
-    await newUser.save();
-
-    await sendVerificationEmail(email, verificationToken);
-
-    res.json({ success: true, message: "Please check your email to verify your account" });
   } catch (error) {
     console.error(error);
-    res.json({ success: false, message: error.message });
+    return res.json({ success: false, message: error.message });
   }
 };
 
@@ -97,28 +133,33 @@ const loginUser = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
-    res.json({ success: false, message: error.message });
+    return res.json({ success: false, message: error.message });
   }
 };
 
+/*
+  Optional: An endpoint to verify email via a GET request using query parameters.
+  This is provided if you want to support a link-based verification fallback.
+*/
 const verifyEmail = async (req, res) => {
   try {
-    const { token } = req.query;
+    const { code, email } = req.query;
     const user = await userModel.findOne({
-      verificationToken: token,
-      verificationTokenExpires: { $gt: Date.now() }
+      email,
+      verificationCode: code,
+      verificationCodeExpires: { $gt: Date.now() }
     });
     if (!user) {
-      return res.json({ success: false, message: "Invalid or expired verification link" });
+      return res.json({ success: false, message: "Invalid or expired verification code" });
     }
     user.isVerified = true;
-    user.verificationToken = undefined;
-    user.verificationTokenExpires = undefined;
+    user.verificationCode = undefined;
+    user.verificationCodeExpires = undefined;
     await user.save();
     res.redirect(`${process.env.FRONTEND_URL}/login?verified=true`);
   } catch (error) {
     console.error(error);
-    res.json({ success: false, message: error.message });
+    return res.json({ success: false, message: error.message });
   }
 };
 
@@ -132,35 +173,36 @@ const resendVerificationEmail = async (req, res) => {
     if (user.isVerified) {
       return res.json({ success: false, message: "Email already verified" });
     }
-    const verificationToken = crypto.randomBytes(32).toString('hex');
-    const verificationTokenExpires = Date.now() + 3600000; // 1 hour
-    user.verificationToken = verificationToken;
-    user.verificationTokenExpires = verificationTokenExpires;
+    const verificationCode = generateVerificationCode();
+    const verificationCodeExpires = Date.now() + 3600000; // 1 hour
+    user.verificationCode = verificationCode;
+    user.verificationCodeExpires = verificationCodeExpires;
     await user.save();
-    await sendVerificationEmail(email, verificationToken);
-    res.json({ success: true, message: "Verification email sent" });
+    await sendVerificationEmail(email, verificationCode);
+    return res.json({ success: true, message: "Verification email sent" });
   } catch (error) {
     console.error(error);
-    res.json({ success: false, message: error.message });
+    return res.json({ success: false, message: error.message });
   }
 };
 
-// Existing functions (unchanged)
+// --- The remaining functions remain unchanged ---
+
 const userCredits = async (req, res) => {
   try {
-    const { userID } = req.body;
-    const user = await userModel.findById(userID);
+    const { userId } = req.body;
+    const user = await userModel.findById(userId);
     if (!user) {
       return res.json({ success: false, message: "User not found" });
     }
-    res.json({
+    return res.json({
       success: true,
       credits: user.creditBalance,
       user: { name: user.name }
     });
   } catch (error) {
     console.error(error.message);
-    res.json({ success: false, message: error.message });
+    return res.json({ success: false, message: error.message });
   }
 };
 
@@ -214,10 +256,10 @@ const paymentRazorpay = async (req, res) => {
       receipt: newTransaction._id.toString()
     };
     const order = await razorpayInstance.orders.create(options);
-    res.json({ success: true, order });
+    return res.json({ success: true, order });
   } catch (error) {
     console.error(error);
-    res.json({ success: false, message: error.message });
+    return res.json({ success: false, message: error.message });
   }
 };
 
@@ -245,10 +287,10 @@ const verifyRazorpay = async (req, res) => {
     const creditBalance = userData.creditBalance + transactionData.credits;
     await userModel.findByIdAndUpdate(userData._id, { creditBalance });
     await transactionModel.findByIdAndUpdate(transactionData._id, { payment: true });
-    res.json({ success: true, message: "Credits Added" });
+    return res.json({ success: true, message: "Credits Added" });
   } catch (error) {
     console.error(error);
-    res.json({ success: false, message: error.message });
+    return res.json({ success: false, message: error.message });
   }
 };
 
