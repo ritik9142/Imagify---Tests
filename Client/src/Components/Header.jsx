@@ -23,7 +23,7 @@ const Header = () => {
 
       <motion.div className='text-stone-500 inline-flex text-center gap-2 bg-white px-6 py-1 rounded-full border border-neutral-500'
         initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} viewport={{ delay: 0.2, duration: 0.8 }}>
-        <p>Premier Solution for Text-to-Art Generation</p>
+        <p>Premier Solution for AI Art Generation</p>
         <img src={assets.star_icon} alt="" />
       </motion.div>
 
@@ -32,11 +32,11 @@ const Header = () => {
           options={{
             strings: [
               "Turn text to <span class='text-teal-600'>image</span>,in seconds.",
-              "Produce <span class='text-teal-600'>art</span> from text rapidly.",
-              "Generate images from <span class='text-teal-600'>text</span> in a flash.",
+              "Produce <span class='text-teal-600'>art</span> from text or images rapidly.",
+              "Generate images from <span class='text-teal-600'>text or image</span> in a flash.",
               "Transform words into <span class='text-teal-600'>visuals</span> instantly.",
               "Convert written <span class='text-teal-600'>prompts</span> to graphics within moments.",
-              "Quickly create <span class='text-teal-600'>pictures</span> from your descriptive prompts."
+              "Quickly create <span class='text-teal-600'>pictures</span> from your descriptive prompts or images."
             ],
             autoStart: true,
             loop: true,
@@ -51,7 +51,7 @@ const Header = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.6, duration: 0.8 }}>
-        Type. Generate. Amaze. AI turns prompts or text into gallery-worthy visuals,images and artworks at lightning speed—creativity unleashed.
+        Type. Generate. Amaze. AI turns prompts,text or Image into gallery-worthy Visuals, Images and artworks at lightning speed—creativity unleashed.
       </motion.p>
 
       <motion.button onClick={onClickHandler}
@@ -77,7 +77,7 @@ const Header = () => {
       <motion.p initial={{ opacity: 0 }}
         animate={{ opacity: 1 }} transition={{ delay: 1.2, duration: 0.8 }}
         className='mt-2 text-neutral-600'>
-        Generated Images from Remage
+        Generated Images from Krutishu
       </motion.p>
     </motion.div>
   )
