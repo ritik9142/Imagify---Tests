@@ -12,50 +12,27 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Possible states: 'Login', 'Sign Up', 'Resend', 'Verified'
   const [state, setState] = useState('Login');
+  const [signUpStep, setSignUpStep] = useState('sendCode');
 
-  // Form data states
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [code, setCode] = useState('');
 
-  // Error message states
   const [emailError, setEmailError] = useState('');
-  const [passwordErrors, setPasswordErrors] = useState([]); // Array for multiple password errors
+  const [passwordErrors, setPasswordErrors] = useState([]);
 
-  // Resend verification states
   const [resendDisabled, setResendDisabled] = useState(false);
   const [countdown, setCountdown] = useState(0);
-  const isResending = useRef(false); // Prevent multiple resend requests
-  const timerRef = useRef(null); // Prevent multiple timers
+  const isResending = useRef(false);
+  const timerRef = useRef(null);
 
-  // Loading states for better UX
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResendingState, setIsResendingState] = useState(false);
 
   const trustedDomains = ['gmail.com', 'yahoo.com', 'outlook.com', 'example.in'];
 
-  // Check query parameter for verification status
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    if (params.get('verified') === 'true') {
-      setState('Verified');
-    }
-  }, [location.search]);
-
-  // Handle verified state: show modal and auto-close after 10 seconds
-  useEffect(() => {
-    if (state === 'Verified') {
-      toast.success('Your email has been verified. This tab will close automatically in 10 seconds.');
-      const timer = setTimeout(() => {
-        window.close();
-      }, 10000);
-      return () => clearTimeout(timer);
-    }
-  }, [state]);
-
-  // Prevent background scroll while modal is open
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => {
@@ -63,7 +40,6 @@ const Login = () => {
     };
   }, []);
 
-  // Email change handler with domain validation
   const handleEmailChange = (e) => {
     const value = e.target.value;
     setEmail(value);
@@ -75,7 +51,6 @@ const Login = () => {
     }
   };
 
-  // Password change handler with comprehensive validation
   const handlePasswordChange = (e) => {
     const val = e.target.value;
     setPassword(val);
@@ -91,46 +66,103 @@ const Login = () => {
     setPasswordErrors(errors);
   };
 
-  // Form submit handler for Login and Sign Up
-  const onSubmitHandler = async (e) => {
+  const loginSubmitHandler = async (e) => {
     e.preventDefault();
-    if (isSubmitting) return; // Prevent multiple submissions
+    if (isSubmitting) return;
     setIsSubmitting(true);
     try {
-      if (state === 'Login') {
-        const { data } = await axios.post(`${backendUrl}/api/user/login`, { email, password });
-        if (data.success) {
-          setToken(data.token);
-          setUser(data.user);
-          localStorage.setItem('token', data.token);
-          setShowLogin(false);
-          toast.success('Logged in successfully!');
-          navigate('/', { replace: true });
-        } else {
-          toast.error(data.message);
-          if (data.message === 'Please verify your email first') {
-            setState('Resend');
-          }
-        }
-      } else if (state === 'Sign Up') {
-        const { data } = await axios.post(`${backendUrl}/api/user/register`, { name, email, password });
-        if (data.success) {
-          setShowLogin(false);
-          toast.success(data.message);
-        } else {
-          toast.error(data.message);
+      const { data } = await axios.post(`${backendUrl}/api/user/login`, { email, password });
+      if (data.success) {
+        setToken(data.token);
+        setUser(data.user);
+        localStorage.setItem('token', data.token);
+        setShowLogin(false);
+        toast.success('Logged in successfully!');
+        navigate('/', { replace: true });
+      } else {
+        toast.error(data.message);
+        if (data.message === 'Please verify your email first') {
+          setState('Verify'); // Changed from 'Resend' to 'Verify'
         }
       }
     } catch (error) {
-      toast.error(
-        error.response?.data?.message || error.message || 'An unexpected error occurred.'
-      );
+      toast.error(error.response?.data?.message || error.message || 'An unexpected error occurred.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Resend verification handler with timer lock
+  const sendCodeHandler = async (e) => {
+    e.preventDefault();
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const { data } = await axios.post(`${backendUrl}/api/user/register`, { name, email, password });
+      if (data.success && data.message.toLowerCase().includes('verification code sent')) {
+        toast.success(data.message);
+        setSignUpStep('createAccount');
+        setResendDisabled(true);
+        setCountdown(60);
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || error.message || 'An unexpected error occurred.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const createAccountHandler = async (e) => {
+    e.preventDefault();
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const { data } = await axios.post(`${backendUrl}/api/user/register`, { name, email, password, code });
+      if (data.success) {
+        setToken(data.token);
+        setUser(data.user);
+        localStorage.setItem('token', data.token);
+        setShowLogin(false);
+        toast.success('Account created and verified. Logged in successfully!');
+        navigate('/', { replace: true });
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      if (error.response && error.response.status === 404) {
+        toast.error('Wrong Verification Code');
+      } else {
+        toast.error(error.response?.data?.message || error.message || 'An unexpected error occurred.');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // New handler for verifying and logging in from the "Verify" state
+  const verifyAndLoginHandler = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const { data } = await axios.post(`${backendUrl}/api/user/register`, { email, password, code });
+      if (data.success) {
+        setToken(data.token);
+        setUser(data.user);
+        localStorage.setItem('token', data.token);
+        setShowLogin(false);
+        toast.success('Account verified and logged in successfully!');
+        navigate('/', { replace: true });
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || error.message || 'An unexpected error occurred.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const resendVerification = async () => {
     if (isResending.current || resendDisabled) return;
     isResending.current = true;
@@ -145,16 +177,13 @@ const Login = () => {
         toast.error(data.message);
       }
     } catch (error) {
-      toast.error(
-        error.response?.data?.message || error.message || 'Failed to resend verification email.'
-      );
+      toast.error(error.response?.data?.message || error.message || 'Failed to resend verification email.');
     } finally {
       isResending.current = false;
       setIsResendingState(false);
     }
   };
 
-  // Manage countdown timer
   useEffect(() => {
     if (resendDisabled) {
       if (timerRef.current) clearInterval(timerRef.current);
@@ -173,24 +202,10 @@ const Login = () => {
     }
   }, [resendDisabled]);
 
-  // Render Verified state modal
-  if (state === 'Verified') {
-    return (
-      <div className="fixed top-0 left-0 right-0 bottom-0 z-50 backdrop-blur-sm bg-black/30 flex justify-center items-center">
-        <div className="bg-white p-10 rounded-xl text-center">
-          <h2 className="text-2xl font-medium text-neutral-700">Email Verified</h2>
-          <p className="mt-4 text-slate-500">
-            Your email has been verified. This tab will close automatically in 10 seconds.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="fixed top-0 left-0 right-0 bottom-0 z-50 backdrop-blur-sm bg-black/30 flex justify-center items-center">
       <motion.form
-        onSubmit={onSubmitHandler}
+        onSubmit={state === 'Login' ? loginSubmitHandler : (signUpStep === 'sendCode' ? sendCodeHandler : createAccountHandler)}
         initial={{ opacity: 0.2, y: 50 }}
         transition={{ duration: 0.3 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -198,17 +213,18 @@ const Login = () => {
         className="relative bg-white p-10 rounded-xl text-slate-500"
       >
         <h1 className="text-center text-2xl text-neutral-700 font-medium">
-          {state === 'Resend' ? 'Verify Your Email' : state}
+          {state === 'Verify' ? 'Verify Your Email' : state}
         </h1>
+
         {state === 'Login' && <p className="text-sm">Welcome back! Please sign in to continue.</p>}
-        {state === 'Sign Up' && <p className="text-sm">Create your Remage account.</p>}
-        {state === 'Resend' && (
+        {state === 'Sign Up' && <p className="text-sm">Create your Krutishu account.</p>}
+        {state === 'Verify' && (
           <p className="text-sm text-center">
-            Please verify your email to log in. Check your inbox or resend the verification email.
+            Please verify your email to log in. Enter the verification code sent to your email.
           </p>
         )}
 
-        {/* Name Field (only for Sign Up) */}
+        {/* Name Field (for Sign Up) */}
         {state === 'Sign Up' && (
           <div className="border px-6 py-2 flex items-center gap-2 rounded-full mt-4">
             <img src={assets.user_icon} alt="User icon" />
@@ -225,7 +241,7 @@ const Login = () => {
         )}
 
         {/* Email and Password Fields (for Login and Sign Up) */}
-        {state !== 'Resend' && (
+        {(state === 'Login' || state === 'Sign Up') && (
           <>
             <div className="border px-6 py-2 flex items-center gap-2 rounded-full mt-5">
               <img src={assets.email_icon} alt="Email icon" />
@@ -263,46 +279,99 @@ const Login = () => {
           </>
         )}
 
-        {/* Resend Verification Section */}
-        {state === 'Resend' && (
-          <div className="mt-5">
+        {/* Code Field (for Sign Up and Verify) */}
+        {(state === 'Sign Up' && signUpStep === 'createAccount') || state === 'Verify' ? (
+          <div className="border px-6 py-2 flex items-center gap-2 rounded-full mt-5">
+            <img src={assets.code_icon || 'https://via.placeholder.com/20'} alt="Code icon" />
             <input
-              type="email"
-              name="email"
-              placeholder="Enter your email"
-              value={email}
-              onChange={handleEmailChange}
-              className="border px-6 py-2 rounded-full w-full outline-none text-sm"
+              type="text"
+              name="code"
+              placeholder="Enter Verification Code"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              className="outline-none text-sm w-full"
               required
             />
+          </div>
+        ) : null}
+
+        {/* Verify State UI */}
+        {state === 'Verify' && (
+          <>
+            <div className="border px-6 py-2 flex items-center gap-2 rounded-full mt-5">
+              <img src={assets.email_icon} alt="Email icon" />
+              <input
+                type="email"
+                name="email"
+                placeholder="Email"
+                value={email}
+                className="outline-none text-sm w-full bg-gray-100"
+                disabled
+              />
+            </div>
+            <button
+              type="button"
+              onClick={verifyAndLoginHandler}
+              disabled={isSubmitting || !code}
+              className="mt-6 bg-blue-600 w-full text-white py-2 rounded-full disabled:bg-gray-400"
+            >
+              {isSubmitting ? 'Verifying...' : 'Verify and Log In'}
+            </button>
             <button
               type="button"
               onClick={resendVerification}
               disabled={resendDisabled || isResendingState}
-              className={`mt-4 bg-blue-600 w-full text-white py-2 rounded-full ${
-                resendDisabled || isResendingState ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
+              className={`mt-4 bg-green-600 w-full text-white py-2 rounded-full ${resendDisabled || isResendingState ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               {isResendingState ? 'Resending...' : resendDisabled ? `Resend in ${countdown}s` : 'Resend Verification Email'}
             </button>
+          </>
+        )}
+
+        {/* Buttons for Sign Up flow */}
+        {state === 'Sign Up' && (
+          <div className="mt-6 space-y-4">
+            {signUpStep === 'sendCode' && (
+              <button
+                type="button"
+                onClick={sendCodeHandler}
+                disabled={isSubmitting || !name || !email || !password || emailError || passwordErrors.length > 0}
+                className="bg-blue-600 w-full text-white py-2 rounded-full disabled:bg-gray-400"
+              >
+                {isSubmitting ? 'Sending...' : 'Send Code'}
+              </button>
+            )}
+            {signUpStep === 'createAccount' && (
+              <>
+                <button
+                  type="button"
+                  onClick={createAccountHandler}
+                  disabled={isSubmitting || !code}
+                  className="bg-blue-600 w-full text-white py-2 rounded-full disabled:bg-gray-400"
+                >
+                  {isSubmitting ? 'Submitting...' : 'Create Account'}
+                </button>
+                <button
+                  type="button"
+                  onClick={resendVerification}
+                  disabled={resendDisabled || isResendingState}
+                  className={`bg-green-600 w-full text-white py-2 rounded-full ${resendDisabled || isResendingState ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  {isResendingState ? 'Resending...' : resendDisabled ? `Resend in ${countdown}s` : 'Resend Code'}
+                </button>
+              </>
+            )}
           </div>
         )}
 
-        {/* Submit Button */}
-        {state !== 'Resend' && (
+        {/* Submit button for Login */}
+        {state === 'Login' && (
           <button
             type="submit"
-            disabled={
-              isSubmitting ||
-              emailError ||
-              passwordErrors.length > 0 ||
-              !email ||
-              !password ||
-              (state === 'Sign Up' && !name)
-            }
+            disabled={isSubmitting || emailError || passwordErrors.length > 0 || !email || !password}
             className="mt-6 bg-blue-600 w-full text-white py-2 rounded-full disabled:bg-gray-400"
           >
-            {isSubmitting ? 'Submitting...' : state === 'Login' ? 'Sign In' : 'Create Account'}
+            {isSubmitting ? 'Submitting...' : 'Sign In'}
           </button>
         )}
 
@@ -310,7 +379,7 @@ const Login = () => {
         {state === 'Login' && (
           <p className="mt-5 text-center">
             Don’t have an account?{' '}
-            <span className="text-blue-600 cursor-pointer" onClick={() => setState('Sign Up')}>
+            <span className="text-blue-600 cursor-pointer" onClick={() => { setState('Sign Up'); setSignUpStep('sendCode'); }}>
               Sign up
             </span>
           </p>
@@ -323,7 +392,7 @@ const Login = () => {
             </span>
           </p>
         )}
-        {state === 'Resend' && (
+        {state === 'Verify' && (
           <p className="mt-5 text-center">
             Back to login?{' '}
             <span className="text-blue-600 cursor-pointer" onClick={() => setState('Login')}>
