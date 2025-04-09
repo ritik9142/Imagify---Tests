@@ -4,6 +4,7 @@
   "main": "server.js",
   "type": "module",
   "scripts": {
+    "prestart": "mkdir -p uploads"
     "start": "node server.js",
     "server": "nodemon server.js"
   },
