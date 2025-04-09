@@ -17,7 +17,7 @@ userRouter.post("/login", loginUser);
 userRouter.get("/credits", userAuth, userCredits);
 userRouter.post("/pay-razor", userAuth, paymentRazorpay);
 userRouter.post("/verify-razor", verifyRazorpay);
-userRouter.get("/verify-email", verifyEmail);
+userRouter.get("/verify-email", verifyEmail); // Optional fallback for link-based OTP verification
 userRouter.post("/resend-verification", resendVerificationEmail);
 
 export default userRouter;
