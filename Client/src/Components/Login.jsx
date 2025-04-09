@@ -41,7 +41,7 @@ const Login = () => {
   }, []);
 
   const handleEmailChange = (e) => {
-    const value = e.target.value;
+    const value = e.target.value.trim(); // Trim whitespace
     setEmail(value);
     const domain = value.split('@')[1];
     if (domain && !trustedDomains.includes(domain)) {
@@ -52,7 +52,7 @@ const Login = () => {
   };
 
   const handlePasswordChange = (e) => {
-    const val = e.target.value;
+    const val = e.target.value.trim(); // Trim whitespace
     setPassword(val);
     const errors = [];
     if (val.length < 6) errors.push('Password must be at least 6 characters.');
@@ -71,7 +71,7 @@ const Login = () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
-      const { data } = await axios.post(`${backendUrl}/api/user/login`, { email, password });
+      const { data } = await axios.post(`${backendUrl}/api/user/login`, { email: email.trim(), password: password.trim() });
       if (data.success) {
         setToken(data.token);
         setUser(data.user);
@@ -82,7 +82,7 @@ const Login = () => {
       } else {
         toast.error(data.message);
         if (data.message === 'Please verify your email first') {
-          setState('Verify'); // Changed from 'Resend' to 'Verify'
+          setState('Verify');
         }
       }
     } catch (error) {
@@ -97,7 +97,7 @@ const Login = () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
-      const { data } = await axios.post(`${backendUrl}/api/user/register`, { name, email, password });
+      const { data } = await axios.post(`${backendUrl}/api/user/register`, { name: name.trim(), email: email.trim(), password: password.trim() });
       if (data.success && data.message.toLowerCase().includes('verification code sent')) {
         toast.success(data.message);
         setSignUpStep('createAccount');
@@ -118,7 +118,13 @@ const Login = () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
-      const { data } = await axios.post(`${backendUrl}/api/user/register`, { name, email, password, code });
+      const trimmedCode = code.trim(); // Trim the code
+      const { data } = await axios.post(`${backendUrl}/api/user/register`, {
+        name: name.trim(),
+        email: email.trim(),
+        password: password.trim(),
+        code: trimmedCode
+      });
       if (data.success) {
         setToken(data.token);
         setUser(data.user);
@@ -131,9 +137,11 @@ const Login = () => {
       }
     } catch (error) {
       if (error.response && error.response.status === 404) {
-        toast.error('Wrong Verification Code');
+        toast.error('Wrong Verification Code or Password');
+      } else if (error.response?.data?.message) {
+        toast.error(error.response.data.message);
       } else {
-        toast.error(error.response?.data?.message || error.message || 'An unexpected error occurred.');
+        toast.error('An error occurred. Please try again.');
       }
     } finally {
       setIsSubmitting(false);
@@ -145,7 +153,12 @@ const Login = () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
-      const { data } = await axios.post(`${backendUrl}/api/user/register`, { email, password, code });
+      const trimmedCode = code.trim(); // Trim the code
+      const { data } = await axios.post(`${backendUrl}/api/user/register`, {
+        email: email.trim(),
+        password: password.trim(),
+        code: trimmedCode
+      });
       if (data.success) {
         setToken(data.token);
         setUser(data.user);
@@ -157,7 +170,13 @@ const Login = () => {
         toast.error(data.message);
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || error.message || 'An unexpected error occurred.');
+      if (error.response && error.response.status === 404) {
+        toast.error('Wrong Verification Code or Password');
+      } else if (error.response?.data?.message) {
+        toast.error(error.response.data.message);
+      } else {
+        toast.error('An error occurred. Please try again.');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -168,7 +187,7 @@ const Login = () => {
     isResending.current = true;
     setIsResendingState(true);
     try {
-      const { data } = await axios.post(`${backendUrl}/api/user/resend-verification`, { email });
+      const { data } = await axios.post(`${backendUrl}/api/user/resend-verification`, { email: email.trim() });
       if (data.success) {
         toast.success(data.message);
         setResendDisabled(true);
@@ -233,7 +252,7 @@ const Login = () => {
               name="name"
               placeholder="Full Name"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => setName(e.target.value.trim())}
               className="outline-none text-sm w-full"
               required
             />
@@ -288,7 +307,7 @@ const Login = () => {
               name="code"
               placeholder="Enter Verification Code"
               value={code}
-              onChange={(e) => setCode(e.target.value)}
+              onChange={(e) => setCode(e.target.value.trim())}
               className="outline-none text-sm w-full"
               required
             />
