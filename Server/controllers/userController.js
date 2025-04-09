@@ -20,6 +20,12 @@ const validatePassword = (password, name) => {
   return true;
 };
 
+// Check for critical environment variables
+if (!process.env.JWT_SECRET || !process.env.FRONTEND_URL) {
+  console.error("Missing critical environment variables");
+  process.exit(1);
+}
+
 /*
   Registration endpoint now handles both initial registration (sending OTP code)
   and OTP verification (when "code" is provided).
@@ -28,7 +34,6 @@ const registerUser = async (req, res) => {
   try {
     const { name, email, password, code } = req.body;
 
-    // Ensure email is always provided
     if (!email) {
       return res.json({ success: false, message: "Email is required" });
     }
@@ -56,7 +61,7 @@ const registerUser = async (req, res) => {
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(password, salt);
       const verificationCode = generateVerificationCode();
-      const verificationCodeExpires = Date.now() + 3600000; // 1 hour
+      const verificationCodeExpires = new Date().getTime() + 3600000; // 1 hour in UTC
 
       const userData = {
         name,
@@ -72,24 +77,35 @@ const registerUser = async (req, res) => {
 
       await sendVerificationEmail(email, verificationCode);
 
+      console.log(`New user registered: ${email}, Verification Code: ${verificationCode}, Expires: ${verificationCodeExpires}`);
+
       return res.json({
         success: true,
         message: "Verification code sent. Please enter the code to verify your account."
       });
     } else if (!existingUser.isVerified) {
-      // Existing user, not verified - handle verification
+      // Verification step
       if (!code || !password) {
         return res.json({ success: false, message: "Please provide the verification code and password" });
       }
 
+      console.log(`Verification attempt for ${email}: Provided Code: ${code}, Stored Code: ${existingUser.verificationCode}, Expires: ${existingUser.verificationCodeExpires}, Current Time: ${Date.now()}`);
+
       const isMatch = await bcrypt.compare(password, existingUser.password);
-      if (code === existingUser.verificationCode && existingUser.verificationCodeExpires > Date.now() && isMatch) {
+      console.log(`Password match for ${email}: ${isMatch}`);
+
+      if (
+        String(code) === String(existingUser.verificationCode) && // Ensure string comparison
+        existingUser.verificationCodeExpires > Date.now() &&
+        isMatch
+      ) {
         existingUser.isVerified = true;
         existingUser.verificationCode = undefined;
         existingUser.verificationCodeExpires = undefined;
         await existingUser.save();
 
         const token = jwt.sign({ id: existingUser._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+        console.log(`User ${email} verified and logged in successfully`);
         return res.json({
           success: true,
           token,
@@ -106,7 +122,7 @@ const registerUser = async (req, res) => {
       });
     }
   } catch (error) {
-    console.error(error);
+    console.error(`Error in registerUser for ${email}: ${error.message}`);
     return res.json({ success: false, message: error.message });
   }
 };
@@ -174,7 +190,7 @@ const resendVerificationEmail = async (req, res) => {
       return res.json({ success: false, message: "Email already verified" });
     }
     const verificationCode = generateVerificationCode();
-    const verificationCodeExpires = Date.now() + 3600000; // 1 hour
+    const verificationCodeExpires = new Date().getTime() + 3600000; // 1 hour in UTC
     user.verificationCode = verificationCode;
     user.verificationCodeExpires = verificationCodeExpires;
     await user.save();
