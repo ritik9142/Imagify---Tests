@@ -10,10 +10,10 @@ import { checkForBannedWords } from '../utils/contentModeration.js';
 
 dotenv.config();
 
-const uploadsDir = path.resolve(process.cwd(), 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
+const uploadDir = path.join(process.cwd(), 'uploads');
+fs.mkdir(uploadDir, { recursive: true })
+  .then(() => console.log('Uploads directory is ready'))
+  .catch(err => console.error('Error creating uploads directory:', err));
 
 // Configure Multer for disk storage with validation
 const storage = multer.diskStorage({
