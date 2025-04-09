@@ -89,16 +89,15 @@ const registerUser = async (req, res) => {
         return res.json({ success: false, message: "Please provide the verification code and password" });
       }
 
-      console.log(`Verification attempt for ${email}: Provided Code: ${code}, Stored Code: ${existingUser.verificationCode}, Expires: ${existingUser.verificationCodeExpires}, Current Time: ${Date.now()}`);
+      console.log(`Verification attempt for ${email}: Provided Code: "${code}", Stored Code: "${existingUser.verificationCode}", Expires: ${existingUser.verificationCodeExpires}, Current Time: ${Date.now()}`);
 
-      const isMatch = await bcrypt.compare(password, existingUser.password);
-      console.log(`Password match for ${email}: ${isMatch}`);
+      const isCodeMatch = String(code) === String(existingUser.verificationCode);
+      const isTimeValid = existingUser.verificationCodeExpires > Date.now();
+      const isPasswordMatch = await bcrypt.compare(password, existingUser.password);
 
-      if (
-        String(code) === String(existingUser.verificationCode) && // Ensure string comparison
-        existingUser.verificationCodeExpires > Date.now() &&
-        isMatch
-      ) {
+      console.log(`Verification details for ${email}: Code Match: ${isCodeMatch}, Time Valid: ${isTimeValid}, Password Match: ${isPasswordMatch}`);
+
+      if (isCodeMatch && isTimeValid && isPasswordMatch) {
         existingUser.isVerified = true;
         existingUser.verificationCode = undefined;
         existingUser.verificationCodeExpires = undefined;
@@ -113,7 +112,11 @@ const registerUser = async (req, res) => {
           message: "Account verified and logged in."
         });
       } else {
-        return res.status(404).json({ success: false, message: "Wrong Verification Code or Password" });
+        let errorMessage = "Verification failed: ";
+        if (!isCodeMatch) errorMessage += "Wrong Verification Code. ";
+        if (!isTimeValid) errorMessage += "Code has expired. ";
+        if (!isPasswordMatch) errorMessage += "Wrong Password.";
+        return res.status(404).json({ success: false, message: errorMessage.trim() });
       }
     } else {
       return res.json({
