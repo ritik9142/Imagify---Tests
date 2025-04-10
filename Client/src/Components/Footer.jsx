@@ -4,11 +4,9 @@ import { assets } from '../assets/assets';
 const Footer = () => {
   // Array of policy links with names and URLs
   const policyLinks = [
-    { name: 'Terms and Conditions', url: 'https://merchant.razorpay.com/policy/Q3vf8fuC7bRjeV/terms' },
-    { name: 'Privacy Policy', url: 'https://merchant.razorpay.com/policy/Q3vf8fuC7bRjeV/privacy' },
-    { name: 'Cancellations and Refunds', url: 'https://merchant.razorpay.com/policy/Q3vf8fuC7bRjeV/refund' },
-    { name: 'Shipping Policy', url: 'https://merchant.razorpay.com/policy/Q3vf8fuC7bRjeV/shipping' },
-    { name: 'Contact Us', url: 'https://merchant.razorpay.com/policy/Q3vf8fuC7bRjeV/contact_us' },
+    { name: 'Terms and Conditions', url: 'https://docs.google.com/document/d/e/2PACX-1vT0ns95TSRrpka5SRAGv44P3stLuoNLKTQ3oIEQv1bp9Czz5SmVOWxqBbXMzTsr-p8dPoIeru7zKC_l/pub' },
+    { name: 'Privacy Policy', url: 'https://docs.google.com/document/d/e/2PACX-1vSUTOjs3IKrP6BfMGbKxnGEU1MIRRhA1cfNsVKMGqxsTQOaaNWc6B-Hcu4xFtdZZPZPew2KGATDzuvY/pub' },
+    { name: 'Cancellations and Refunds', url: 'https://docs.google.com/document/d/e/2PACX-1vQ1-ZZiUH0m_xjLsD8jUkS-aMGIg4VPRnwvS2vo5--dbcXRtqka-oM_Y2aC9PpA2uCfmrkUjvbRrEwu/pub' },
   ];
 
   return (
