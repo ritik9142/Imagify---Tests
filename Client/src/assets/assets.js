@@ -7,7 +7,7 @@ import star_icon from './star_icon.svg';
 import rating_star from './rating_star.svg';
 import sample_img_1 from './sample_img_1.webp';
 import sample_img_2 from './sample_img_2.webp';
-import profile_img_1 from './profile_img_1.png';
+import profile_img_1 from './profile_img_1.jpeg';
 import profile_img_2 from './profile_img_2.webp';
 import profile_img_3 from './profile_img_3.webp';
 import step_icon_1 from './step_icon_1.svg';
@@ -73,8 +73,8 @@ export const stepsData = [
 export const testimonialsData = [
   {
     image: profile_img_1,
-    name: 'Shubhangi Wahane',
-    role: 'Principal Architect',
+    name: 'Yogesh Sewada',
+    role: 'Web Developer',
     stars: 5,
     text: 'I have been using Krutishu for nearly two years, primarily for Instagram, and it has been incredibly user-friendly, making my work much easier.',
   },
@@ -114,4 +114,3 @@ export const plans = [
     desc: 'Best for enterprise use.',
   },
 ];
-
