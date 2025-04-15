@@ -7,17 +7,17 @@ const Footer = () => {
     { name: 'Terms and Conditions', url: 'https://docs.google.com/document/d/e/2PACX-1vT0ns95TSRrpka5SRAGv44P3stLuoNLKTQ3oIEQv1bp9Czz5SmVOWxqBbXMzTsr-p8dPoIeru7zKC_l/pub' },
     { name: 'Privacy Policy', url: 'https://docs.google.com/document/d/e/2PACX-1vSUTOjs3IKrP6BfMGbKxnGEU1MIRRhA1cfNsVKMGqxsTQOaaNWc6B-Hcu4xFtdZZPZPew2KGATDzuvY/pub' },
     { name: 'Cancellations and Refunds', url: 'https://docs.google.com/document/d/e/2PACX-1vQ1-ZZiUH0m_xjLsD8jUkS-aMGIg4VPRnwvS2vo5--dbcXRtqka-oM_Y2aC9PpA2uCfmrkUjvbRrEwu/pub' },
-  ];
+  ]
 
   return (
     <div className="mt-20">
-      <div className="flex items-center justify-between py-3">
+      <div className="flex flex-col md:flex-row items-center md:justify-between py-3">
         {/* Logo */}
         <img src={assets.logo} width={150} alt="Krutishu Logo" />
 
         {/* Policy Links and Copyright */}
-        <div className="flex items-center gap-4">
-          <div className="flex gap-4">
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex flex-wrap gap-4">
             {policyLinks.map((link, index) => (
               <a
                 key={index}
@@ -34,7 +34,7 @@ const Footer = () => {
         </div>
 
         {/* Social Media Icons */}
-        <div className="flex gap-2.5">
+        <div className="flex flex-wrap gap-2.5">
           <a href="https://www.facebook.com" target="_blank" rel="noopener noreferrer">
             <img src={assets.facebook_icon} alt="Facebook" width={35} />
           </a>
