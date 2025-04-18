@@ -1,12 +1,13 @@
-// Remage/Server/controllers/StyleController.js
 import { Client } from '@gradio/client';
 import multer from 'multer';
-import fs from 'fs/promises'; // Use promises for async file operations
+import fs from 'fs/promises';
 import path from 'path';
 import userModel from "../models/userModel.js";
 import dotenv from 'dotenv';
-import axios from 'axios'; // Added for downloading images
+import axios from 'axios';
 import { checkForBannedWords } from '../utils/contentModeration.js';
+import { ImageAnnotatorClient } from '@google-cloud/vision';
+import sharp from 'sharp'; // Added Sharp import
 
 dotenv.config();
 
@@ -15,7 +16,9 @@ fs.mkdir(uploadDir, { recursive: true })
   .then(() => console.log('Uploads directory is ready'))
   .catch(err => console.error('Error creating uploads directory:', err));
 
-// Configure Multer for disk storage with validation
+const visionClient = new ImageAnnotatorClient();  
+
+// Configure Multer (unchanged)
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, 'uploads/');
@@ -38,7 +41,7 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({
   storage,
   fileFilter,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  limits: { fileSize: 5 * 1024 * 1024 },
 });
 
 export const uploadMiddleware = upload.fields([
@@ -46,11 +49,6 @@ export const uploadMiddleware = upload.fields([
   { name: 'style_image', maxCount: 1 },
 ]);
 
-/**
- * Shuffles array in place using Fisher-Yates algorithm.
- * @param {Array} array - The array to shuffle.
- * @returns {Array} The shuffled array.
- */
 function shuffleArray(array) {
   for (let i = array.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -59,19 +57,24 @@ function shuffleArray(array) {
   return array;
 }
 
-/**
- * Generate an image-to-image output using Gradio client.
- * Expects:
- *  - req.user.id (set by auth middleware)
- *  - req.body.prompt, depth_strength, style_strength
- *  - Files: structure_image (required), style_image (optional)
- */
+// Image processing helper function
+const processImage = async (buffer) => {
+  try {
+    const metadata = await sharp(buffer).metadata();
+    if (metadata.width > 1024 || metadata.height > 1024) {
+      return await sharp(buffer).resize({ width: 1024, height: 1024, fit: 'inside' }).toBuffer();
+    }
+    return buffer;
+  } catch (error) {
+    throw new Error('Invalid image file');
+  }
+};
+
 export const generateImageToImage = async (req, res) => {
   try {
     console.log("Request body:", req.body);
     console.log("Request files:", req.files);
 
-    // Extract user ID from req.user (set by auth middleware)
     const userID = req.user?.id;
     if (!userID) {
       return res.status(400).json({
@@ -103,7 +106,6 @@ export const generateImageToImage = async (req, res) => {
       });
     }
 
-    // Fetch user from database
     const user = await userModel.findById(userID);
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found" });
@@ -116,15 +118,27 @@ export const generateImageToImage = async (req, res) => {
       });
     }
 
-    // Extract uploaded files
     const structureFile = req.files['structure_image'][0];
     const styleFile = req.files['style_image'] ? req.files['style_image'][0] : null;
 
-    // Read file buffers asynchronously
-    const [structureImage, styleImage] = await Promise.all([
-      fs.readFile(structureFile.path),
-      styleFile ? fs.readFile(styleFile.path) : null,
-    ]);
+    // Read and process image buffers
+    const structureBuffer = await fs.readFile(structureFile.path);
+    let finalStructureBuffer;
+    try {
+      finalStructureBuffer = await processImage(structureBuffer);
+    } catch (error) {
+      return res.status(400).json({ success: false, message: 'Invalid structure image' });
+    }
+
+    let finalStyleBuffer = null;
+    if (styleFile) {
+      const styleBuffer = await fs.readFile(styleFile.path);
+      try {
+        finalStyleBuffer = await processImage(styleBuffer);
+      } catch (error) {
+        return res.status(400).json({ success: false, message: 'Invalid style image' });
+      }
+    }
 
     // Clean up temporary files
     await Promise.all([
@@ -132,11 +146,9 @@ export const generateImageToImage = async (req, res) => {
       styleFile ? fs.unlink(styleFile.path) : Promise.resolve(),
     ]).catch((err) => console.warn('Cleanup failed:', err));
 
-    // Parse strength parameters with defaults
     const depthStrength = parseFloat(depth_strength) || 20;
     const styleStrength = parseFloat(style_strength) || 0.5;
 
-    // Load and validate API tokens from environment variables
     const tokens = [];
     let i = 1;
     while (process.env[`HF_TOKEN${i}`]) {
@@ -152,13 +164,11 @@ export const generateImageToImage = async (req, res) => {
     }
     console.log("Loaded tokens:", tokens.map(t => t.substring(0, 5) + "..."));
 
-    // Shuffle tokens to randomize order for this request
     const shuffledTokens = shuffleArray([...tokens]);
 
     let generatedResult;
     let successFlag = false;
 
-    // Try each token in shuffled order until successful
     for (const token of shuffledTokens) {
       try {
         const client = await Client.connect("multimodalart/flux-style-shaping", {
@@ -166,8 +176,8 @@ export const generateImageToImage = async (req, res) => {
         });
         const result = await client.predict("/generate_image", {
           prompt,
-          structure_image: structureImage,
-          style_image: styleImage,
+          structure_image: finalStructureBuffer,
+          style_image: finalStyleBuffer,
           depth_strength: depthStrength,
           style_strength: styleStrength,
         });
@@ -192,7 +202,6 @@ export const generateImageToImage = async (req, res) => {
       });
     }
 
-    // Check if generatedResult is a valid URL
     if (typeof generatedResult !== 'string' || !generatedResult.startsWith('http')) {
       console.error('Invalid generated result:', generatedResult);
       return res.status(500).json({
@@ -201,14 +210,12 @@ export const generateImageToImage = async (req, res) => {
       });
     }
 
-    // Deduct one credit
     const updatedUser = await userModel.findByIdAndUpdate(
       user._id,
       { $inc: { creditBalance: -1 } },
       { new: true }
     );
 
-    // Download the generated image
     let resultImage;
     try {
       const imageResponse = await axios.get(generatedResult, { responseType: 'arraybuffer' });
@@ -225,7 +232,6 @@ export const generateImageToImage = async (req, res) => {
       });
     }
 
-    // Send the response with base64 image and custom filename
     res.status(200).json({
       success: true,
       message: "Image generated successfully",
