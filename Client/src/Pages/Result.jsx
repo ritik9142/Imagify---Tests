@@ -8,8 +8,7 @@ import 'swiper/css';
 import 'swiper/css/navigation';
 import { Autoplay, Navigation } from 'swiper/modules';
 import LiquidSlider from '../Components/LiquidSlider';
-import { toast } from 'react-toastify';
-import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify'; // Optional: for error notifications
 
 const Result = () => {
   // States
@@ -29,9 +28,6 @@ const Result = () => {
 
   // Context functions
   const { generateImage: generateTextToImage, generateImageToImage } = useContext(AppContext);
-
-  // Navigation hook
-  const navigate = useNavigate();
 
   // Example images for Text-to-Image
   const exampleImages = [
@@ -138,13 +134,8 @@ const Result = () => {
         setIsImageLoaded(true);
       }
     } catch (error) {
-      if (error.response?.status === 402) {
-        toast.error('Insufficient credits to generate image.');
-        navigate('/buy');
-      } else {
-        toast.error('An error occurred during generation: ' + error.message);
-        console.error('Generation error:', error);
-      }
+      toast.error('An error occurred during generation: ' + error.message);
+      console.error('Generation error:', error);
     } finally {
       setLoading(false);
     }
