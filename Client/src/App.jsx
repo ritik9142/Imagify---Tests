@@ -15,9 +15,22 @@ import { AppContext } from './Context/AppContext'
 
 // PrivateRoute component to protect routes
 const PrivateRoute = ({ children }) => {
-  const { user } = useContext(AppContext); // Assuming user is stored in context
-  return user ? children : <Navigate to="/" />;
+  const { user, setShowLogin } = useContext(AppContext);
+  if (!user) {
+    setShowLogin(true); // Trigger login modal
+    return <Navigate to="/" />;
+  }
+  return children;
 };
+
+// NotFound component for unmatched routes
+const NotFound = () => (
+  <div className="text-center py-10">
+    <h1 className="text-4xl font-bold mb-4">404 - Not Found</h1>
+    <p className="text-lg">The page you're looking for doesn't exist.</p>
+    <a href="/" className="text-blue-500 underline">Go to Home</a>
+  </div>
+);
 
 const App = () => {
   const { showLogin } = useContext(AppContext)
