@@ -7,7 +7,7 @@ import Home from './Pages/Home'
 import Result from './Pages/Result'
 import BuyCredit from './Pages/BuyCredit'
 import Navbar from './Components/Navbar'
-import Stylebar from './Components/Stylebar'
+
 import Footer from './Components/Footer'
 import Login from './Components/Login'
 import Trends from './Pages/Trends';
@@ -26,7 +26,7 @@ const App = () => {
     <div className='px-4 sm:px-10 md:px-14 lg:px-28 min-h-screen bg-gradient-to-b from-teal-50 to-orange-50'>
       <ToastContainer position='bottom-right'/>
       <Navbar/>
-      <Stylebar /> 
+      
       {showLogin && <Login/>}
       
       <Routes>
