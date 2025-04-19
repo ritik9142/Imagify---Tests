@@ -10,7 +10,7 @@ import Navbar from './Components/Navbar'
 
 import Footer from './Components/Footer'
 import Login from './Components/Login'
-import Trends from './Pages/Trends';
+
 import { AppContext } from './Context/AppContext'
 
 // PrivateRoute component to protect routes
@@ -34,7 +34,7 @@ const App = () => {
         <Route path='/buy' element={<BuyCredit/>}/>
         {/* Protect the /result route */}
         <Route path='/result' element={<PrivateRoute><Result/></PrivateRoute>}/>
-        <Route path='/trends' element={<Trends/>}/>
+        
       </Routes>
 
       <Footer/>
